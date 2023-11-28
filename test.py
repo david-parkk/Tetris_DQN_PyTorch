@@ -14,12 +14,12 @@ def get_args():
     parser.add_argument("--fps", type=int, default=300, help="frames per second")
 
     parser.add_argument("--width", type=int, default=10, help="The common width for all images")
-    parser.add_argument("--height", type=int, default=20, help="The common height for all images")
-    parser.add_argument("--block_size", type=int, default=50, help="Size of a block")
+    parser.add_argument("--height", type=int, default=25, help="The common height for all images")
+    parser.add_argument("--block_size", type=int, default=20, help="Size of a block")
     parser.add_argument("--save_frame", type=bool, default=True)
     parser.add_argument("--convert_gif", type=bool, default=True)
 
-    weightFile = 'tetris_E3651_L741'
+    weightFile = 'tetris_E3638_L41'
     parser.add_argument("--saved_path", type=str, default="weightFiles/"+weightFile)
     parser.add_argument("--out_images", type=str, default='out_images/'+weightFile)
 

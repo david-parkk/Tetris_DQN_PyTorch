@@ -5,12 +5,15 @@ from matplotlib import style
 import torch
 import random
 from datetime import datetime
+import time  # Import the time module
 
 style.use('ggplot')
 
 
 class Tetromino:
     def __init__(self):
+        
+
         self.pieces = [1, 2, 3, 4, 5, 6, 7]
 
         colors = [         # RGB
@@ -29,26 +32,37 @@ class Tetromino:
             [[1, 1],
              [1, 1]],
 
-            [[0, 2, 0],
-             [2, 2, 2]],
+            [[2, 0],
+             [2, 2],
+             [2, 0]],
 
-            [[0, 3, 3],
-             [3, 3, 0]],
+            [[3, 0],
+             [3, 3],
+             [0, 3]],
 
-            [[4, 4, 0],
-             [0, 4, 4]],
+            [[0, 4],
+             [4, 4],
+             [4, 0]],
+            
+            [[5], 
+             [5], 
+             [5], 
+             [5]],
 
-            [[5, 5, 5, 5]],
+            [[6, 0],
+             [6, 0],
+             [6, 6]],
 
-            [[0, 0, 6],
-             [6, 6, 6]],
-
-            [[7, 0, 0],
-             [7, 7, 7]]
+ 
+            [[7, 7],
+             [7, 0],
+             [7, 0]]
         ]
         self.colors = [np.array(c[::-1], dtype=np.uint8) for c in colors]
         self.pieces_detail = [np.array(p, dtype=np.uint8) for p in pieces_detail]
-
+    
+    
+    
     def __len__(self):
         return len(self.pieces)
 
@@ -63,7 +77,8 @@ class Tetromino:
 class Tetris:
     tetromino = Tetromino()
 
-    def __init__(self, height=20, width=10, block_size=20, out_images=None):
+    def __init__(self, height=10, width=10, block_size=5, out_images=None):
+        self.start_time = time.time()
         self.height, self.width, self.block_size = height, width, block_size
         self.board_size = (height, width)
         # info_board
@@ -73,7 +88,12 @@ class Tetris:
         self.info_board = np.ones((h, w, c), dtype=np.uint8) * np.array(bg_color, dtype=np.uint8)
         self.out_images = out_images
         self.reset()
+    def get_elapsed_time(self):
+        elapsed_time_in_seconds = int(time.time() - self.start_time)
+        elapsed_time_in_milliseconds = int((time.time() - self.start_time) * 1000) % 1000
+        return elapsed_time_in_seconds, elapsed_time_in_milliseconds
 
+    
     def reset(self):
         self.board = np.zeros(self.board_size, dtype=np.uint8)
         self.score = 0
@@ -96,6 +116,8 @@ class Tetris:
         return torch.FloatTensor(state)
 
     def get_next_states(self):
+        #다음상태로 가능한 state를 가져옴
+
         states = {}
         num_rotations = 0
         if self.piece_id == 1:
@@ -113,15 +135,39 @@ class Tetris:
                 pos = {'x': x, 'y': 0}
                 while not self.check_collision(piece, pos):
                     pos['y'] += 1
+                
+                # print("before")
+                # print(piece)
+                #_, piece = self.truncate(piece, pos)
+                # print("after")
+                # print(piece)
+                temp_piece=curr_piece
+                count1=0
+                for j in range(i):
+                    curr_piece = self.rotate(curr_piece)
+                    count1+=1
+                if(self.now_collision(curr_piece,pos)):
+                    continue
+                piece = curr_piece.copy()
+                
+
+                    
+                while not self.check_collision(piece, pos):
+                    pos['y'] += 1
+                # print("before")
+                # print(piece)
+                #_, piece = self.truncate(piece, pos)
+                # print("after")
+                # print(piece)
                 _, piece = self.truncate(piece, pos)
                 board = self.store(piece, pos)
                 states[(x, i)] = self.get_board_state(board)
-            curr_piece = self.rotate(curr_piece)
+            
         return states
 
     def get_current_board_state(self):
         board = self.board.copy()
-        h, w = self.piece.shape
+        h, w = self.piece.shape#가로 세로 정보 가져옴 
         board[self.current_pos['y']:self.current_pos['y']+h, self.current_pos['x']:self.current_pos['x']+w] += self.piece
         return board
 
@@ -134,13 +180,29 @@ class Tetris:
         }
         if self.check_collision(self.piece, self.current_pos):
             self.gameover = True
+    def now_collision(self,piece,pos):
+        h, w = piece.shape
+        for i in range(w):
+            if(pos['x']+i>=self.width):
+                return True
+        for i in range(h):
+            if(pos['y']+i>=self.height):
+                return True
+        for i in range(w):
+            for j in range(h):
+                if(self.board[pos['y']+j,pos['x']+i]==1)and(piece[j,i]>=1):
+                    True
+        
+        return False
 
+        ###여기
     def check_collision(self, piece, pos):
         future_y = pos['y'] + 1
         h, w = piece.shape
         board_status = (self.board[future_y:future_y+h, pos['x']:pos['x']+w] != 0).astype(int)
         if board_status.shape != piece.shape:
             return True
+        
         overlap = (board_status*2) - np.where(piece>1, 1, piece) == 1
         if np.sum(overlap) > 0 or np.sum(np.array(range(h))+future_y > self.height-1) > 0:
             return True
@@ -189,26 +251,40 @@ class Tetris:
     def step(self, action, render=True, save_frame=None):
         x, num_rotations = action
         self.current_pos = {"x": x, "y": 0}
-        for _ in range(num_rotations):
-            self.piece = self.rotate(self.piece)
+        
 
         while not self.check_collision(self.piece, self.current_pos):
             self.current_pos["y"] += 1
             if render:
                 self.render(save_frame)
+        temp_piece=self.piece
+        for _ in range(num_rotations):
+            self.piece = self.rotate(self.piece)
+        if(self.now_collision(self.piece,self.current_pos)==False):
+            while not self.check_collision(self.piece, self.current_pos):
+                self.current_pos["y"] += 1
+                if render:
+                    self.render(save_frame)
+        else:
+            self.piece=temp_piece
+
 
         overflow, piece = self.truncate(self.piece, self.current_pos)
         self.board = self.store(piece, self.current_pos)
+
         if overflow:
             self.gameover = True
             if render:
                 self.render(save_frame, done=True)
 
         lines_cleared, self.board = self.check_cleared_rows(self.board)
-        score = 1 + (lines_cleared ** 2) * self.width
+        score = 1 + (lines_cleared ** 2) * self.width*10
+        
         self.score += score
         self.num_pieces += 1
         self.cleared_lines += lines_cleared
+        if (self.cleared_lines>=40):
+            self.gameover=True
         if not self.gameover:
             self.new_piece()
         if self.gameover:
@@ -235,24 +311,34 @@ class Tetris:
         img[:, [i * self.block_size for i in range(self.width)], :] = 0
 
         img = np.concatenate((self.info_board, img), axis=0)
-
+        
         cv2.putText(img, "Score:", (self.block_size, self.block_size),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.2, color=self.text_color)
+                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.6, color=self.text_color)
         cv2.putText(img, str(self.score),
                     (7 * self.block_size, self.block_size),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.2, color=self.text_color)
+                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.6, color=self.text_color)
 
-        cv2.putText(img, "N Pieces:", (self.block_size, 2 * self.block_size+int(self.block_size / 2)),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.2, color=self.text_color)
+        cv2.putText(img, "N Pieces:", (self.block_size, 2 * self.block_size),
+                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.6, color=self.text_color)
         cv2.putText(img, str(self.num_pieces),
-                    (7 * self.block_size, 2 * self.block_size + int(self.block_size / 2)),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.2, color=self.text_color)
+                    (7 * self.block_size, 2 * self.block_size),
+                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.6, color=self.text_color)
 
-        cv2.putText(img, "Lines:", (self.block_size, 4 * self.block_size),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.2, color=self.text_color)
+        cv2.putText(img, "Lines:", (self.block_size, 3 * self.block_size),
+                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.6, color=self.text_color)
         cv2.putText(img, str(self.cleared_lines),
-                    (7 * self.block_size, 4 * self.block_size),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=1.2, color=self.text_color)
+                    (7 * self.block_size, 3 * self.block_size),
+                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.6, color=self.text_color)
+
+        elapsed_seconds, elapsed_milliseconds = self.get_elapsed_time()
+        
+
+        cv2.putText(img, "Time:", (self.block_size, 4 * self.block_size),
+                    fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.6, color=self.text_color)
+        
+        cv2.putText(img, f"{elapsed_seconds} : {elapsed_milliseconds}",
+            (7 * self.block_size, 4 * self.block_size),
+            fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.6, color=self.text_color)
 
         if save_frame:
             if done:
@@ -264,7 +350,7 @@ class Tetris:
 
 
 if __name__ == '__main__':
-    height, width, block_size = 18, 10, 20
+    height, width, block_size = 25, 10, 20
     fps = 300
 
     env = Tetris(height, width, block_size)
