@@ -10,6 +10,8 @@ from collections import deque
 from time import time
 from src import Net, Tetris
 from utils.utils import Log, ela_t
+import matplotlib.pyplot as plt
+
 
 
 def get_args():
@@ -28,7 +30,7 @@ def get_args():
     parser.add_argument("--final_epsilon", type=float, default=1e-3)
     parser.add_argument("--num_decay_epochs", type=float, default=2000)
 
-    parser.add_argument("--num_epochs", type=int, default=10000)
+    parser.add_argument("--num_epochs", type=int, default=100)
     parser.add_argument("--batch_size", type=int, default=512, help="The number of images per batch")
     parser.add_argument("--lr", type=float, default=1e-3)
 
@@ -48,6 +50,10 @@ def get_args():
 
 class Agent:
     def __init__(self, opt, device):
+        self.epoch_row=np.array([])
+        self.score_row=np.array([])
+        self.line_row=np.array([])
+
         self.epsilon = opt.initial_epsilon
         self.initial_epsilon, self.final_epsilon = opt.initial_epsilon, opt.final_epsilon
         self.epsilon_decay_step = opt.num_decay_epochs
@@ -82,7 +88,47 @@ class Agent:
         reward_batch = torch.from_numpy(np.array(reward_batch, dtype=np.float32)[:, None])
         next_state_batch = torch.stack(tuple(state for state in next_state_batch))
         return state_batch, reward_batch, next_state_batch, done_batch
-
+    
+    def save_graph_info(self,epoch,final_score,line):
+        self.epoch_row=np.append(self.epoch_row,epoch)
+        self.score_row=np.append(self.score_row,final_score)
+        self.line_row=np.append(self.line_row,line)
+        
+    
+    def plot_and_save_score(self, output_filename='graph_score.png'):
+            # 그래프 생성
+            plt.plot(self.epoch_row, self.score_row)
+            
+            # 그래프 레이블 및 제목 추가 (선택 사항)
+            plt.xlabel('epoch')
+            plt.ylabel('score')
+            plt.title('epoch-score')
+            
+            # 그리드 추가 (선택 사항)
+            plt.grid(True)
+            
+            # 그래프를 이미지로 저장
+            plt.savefig(output_filename)
+            
+            # 그래프를 화면에 표시 (선택 사항)
+            plt.show()
+    def plot_and_save_line(self, output_filename='graph_line.png'):
+            # 그래프 생성
+            plt.plot(self.epoch_row, self.line_row)
+            
+            # 그래프 레이블 및 제목 추가 (선택 사항)
+            plt.xlabel('epoch')
+            plt.ylabel('line')
+            plt.title('epoch-line')
+            
+            # 그리드 추가 (선택 사항)
+            plt.grid(True)
+            
+            # 그래프를 이미지로 저장
+            plt.savefig(output_filename)
+            
+            # 그래프를 화면에 표시 (선택 사항)
+            plt.show()
 
 def train(opt):
     # seed & device
@@ -200,14 +246,18 @@ def train(opt):
             f' Episode: {epoch:3d}/{opt.num_epochs}  |  Loss: {loss:6.3f}  |  Lines: {final_cleared_lines:2d} (max: {max_lines:2d}) '
             f' |  Score: {final_score:3d} (max: {max_score:2d})  |  ela: {ela_t(st)}'
         )
-
+        
+        agent.save_graph_info(epoch,final_score,final_cleared_lines)
         loss.backward()
         optimizer.step()
 
         writer.add_scalar('Train/Score', final_score, epoch - 1)
         writer.add_scalar('Train/Num Pieces', final_num_pieces, epoch - 1)
         writer.add_scalar('Train/Cleared lines', final_cleared_lines, epoch - 1)
-
+    
+    agent.plot_and_save_line()
+    agent.plot_and_save_score()
+    
 
 if __name__ == "__main__":
     opt = get_args()

@@ -157,10 +157,10 @@ class Tetris:
 
                 _, piece = self.truncate(piece, pos)
                 board = self.store(piece, pos)
-                print(x,i)
+                #print(x,i)
                 states[(x, i)] = self.get_board_state(board)
 
-        print()
+        #print()
 
         return states
 
@@ -181,7 +181,7 @@ class Tetris:
             self.gameover = True
     def now_collision(self,piece,pos):
         h, w = piece.shape
-        print()
+        
         if(pos['x']<0):
             return True
         for i in range(w):
@@ -198,7 +198,7 @@ class Tetris:
         return False
     def now_collision1(self,piece,pos):
         h, w = piece.shape
-        print()
+        
         if(pos['x']<0):
             return True
         for i in range(w):
@@ -286,13 +286,13 @@ class Tetris:
                 self.current_pos["y"] += 1
                 if render:
                     self.render(save_frame)
-            print()
+            
         else:
             
             self.piece=temp_piece
             if render:
                 self.render(save_frame)
-            print()
+            
 
 
         overflow, piece = self.truncate(self.piece, self.current_pos)
