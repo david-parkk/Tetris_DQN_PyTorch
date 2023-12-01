@@ -144,25 +144,24 @@ class Tetris:
                 temp_piece=curr_piece
                 count1=0
                 for j in range(i):
-                    curr_piece = self.rotate(curr_piece)
+                    temp_piece = self.rotate(temp_piece)
                     count1+=1
-                if(self.now_collision(curr_piece,pos)):
+                if(self.now_collision1(temp_piece,pos)):
                     continue
-                piece = curr_piece.copy()
+                piece = temp_piece.copy()
                 
 
                     
                 while not self.check_collision(piece, pos):
                     pos['y'] += 1
-                # print("before")
-                # print(piece)
-                #_, piece = self.truncate(piece, pos)
-                # print("after")
-                # print(piece)
+
                 _, piece = self.truncate(piece, pos)
                 board = self.store(piece, pos)
+                print(x,i)
                 states[(x, i)] = self.get_board_state(board)
-            
+
+        print()
+
         return states
 
     def get_current_board_state(self):
@@ -182,6 +181,26 @@ class Tetris:
             self.gameover = True
     def now_collision(self,piece,pos):
         h, w = piece.shape
+        print()
+        if(pos['x']<0):
+            return True
+        for i in range(w):
+            if(pos['x']+i>=self.width):
+                return True
+        for i in range(h):
+            if(pos['y']+i>=self.height):
+                return True
+        for i in range(w):
+            for j in range(h):
+                if(self.board[pos['y']+j,pos['x']+i]>=1)and(piece[j,i]>=1):
+                    return True
+        
+        return False
+    def now_collision1(self,piece,pos):
+        h, w = piece.shape
+        print()
+        if(pos['x']<0):
+            return True
         for i in range(w):
             if(pos['x']+i>=self.width):
                 return True
@@ -194,6 +213,7 @@ class Tetris:
                     True
         
         return False
+
 
         ###여기
     def check_collision(self, piece, pos):
@@ -260,13 +280,19 @@ class Tetris:
         temp_piece=self.piece
         for _ in range(num_rotations):
             self.piece = self.rotate(self.piece)
+        ## a
         if(self.now_collision(self.piece,self.current_pos)==False):
             while not self.check_collision(self.piece, self.current_pos):
                 self.current_pos["y"] += 1
                 if render:
                     self.render(save_frame)
+            print()
         else:
+            
             self.piece=temp_piece
+            if render:
+                self.render(save_frame)
+            print()
 
 
         overflow, piece = self.truncate(self.piece, self.current_pos)
@@ -291,6 +317,7 @@ class Tetris:
         return score, self.gameover
 
     def render(self, save_frame=None, done=False):
+        time.sleep(0.01)
         if not self.gameover:
             img = np.expand_dims(self.get_current_board_state(), axis=-1)
             for piece_id in self.tetromino.pieces:
