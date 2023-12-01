@@ -283,8 +283,6 @@ class Tetris:
         self.score += score
         self.num_pieces += 1
         self.cleared_lines += lines_cleared
-        if (self.cleared_lines>=40):
-            self.gameover=True
         if not self.gameover:
             self.new_piece()
         if self.gameover:
